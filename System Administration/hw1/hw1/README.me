@@ -1,0 +1,67 @@
+Most of this lab is environment setup, if you follow the instruction then there should not exist any problem in this lab or subsequent labs.
+FreeBSD should be downloaded from official website
+
+p.s : I finish all the lab of this courese with Virtualbox. If you use VMWare or multi-OS, instruction and solution may not apply to your machine or code.
+
+Part1. Download FreeBSD & environment setup
+  
+  1. Donwload FreeBSD from official website.
+  
+  2. Build a virtual machine in Virtualbox using the downloaded FreeBSD image file, and you may start to set your virtual machine now.
+  
+  3. Environment setup steps(options on the menu of FreeBSD setting): 
+     select "Install" 
+     -> select "Continue with default map"
+     -> type your host name
+     -> default setting is fine
+     -> select "Auto(ZFS)"
+     -> default setting is fine (be careful value of option "pool name" should be "zroot")
+     -> default setting is fine
+     -> check your configuration again and start installation
+  
+  Remaining setup is more easier but has strong connection with subsequent labs, please be careful.
+  
+  4. Post installation
+     
+     (1). Root password : root password is important even though "sudo" is used. For subsequent labs, 
+          You may need to login into root to execute important command or modification, don't set a password you may not remember.
+     
+     (2). Network interface setup
+          IPv4 & IPv6 interface are not required in all the labs. this part can be skipped.
+          
+     (3). Time zone
+          Set the time zone.
+          
+     (4). Service
+          Select the services you want, sshd & ntpd & ntpdate are selected, service "dumpdev" is disabled.
+          
+     (5). System security hardening
+          Security option can be set by default.
+          
+     (6). Add users
+          Basically, follow the instruction in spec, user "judge" is used for connection of online judge, 
+          another user is for you to finish the labs.
+          p.s : judge need to run sudo without password, you can edit "sudoer" and add a line to indicate the access of judge.
+     
+     (7). Final comfirmation
+          Check all the setting before installation.
+          
+     (8). Install command "sudo"
+          Use command "pkg install sudo" to download sudo command, then set the doucment editor that you're familiar with.
+          configuration of sudoer file can be found on web easily. 
+
+
+Part2. wireguard configuration(you can skip this part if you don't need online judge from NCTU CC)
+
+  1. Install wireguard using pkg or port in FreeBSD, default setting is enough for this course.
+  
+  2. Get wireguard public key and private key from TAs
+  
+  3. After wireguard is downloaded, move to directory of wireguard and create a configuration file,
+     put the keys into the wireguard interface configuration file according to the spec.
+     
+  4. wireguard setting completed, now if you want to test the connectivity, activate the interface through command "wg-quick up [interface name]",
+     and go to NASA online judge to test the connectivity with the ping button provided by NCTU CC.
+     
+  5. If you want wireguard activate every time the virtual machine is started, add argument of wireguard(wireguard_enable & wireguard_interfaces) in rc.conf.
+     (you may follow the instruction of official document)
