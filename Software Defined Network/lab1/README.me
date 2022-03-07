@@ -1,0 +1,35 @@
+This lab appended basic tutorial of environment setup of apps & tools that were used in this course, you may not be able to complete subsequent labs if setup in this lab is not complete thoroughly
+
+Part1. Environment setup
+  Basic environment setup is not provided, please refer to other webpage or finish this part accourding to the spec in the directory here.
+  
+Part2. Basic questions
+  
+  Q1. When ONOS activates “org.onosproject.openflow,” what are the APPs which it also activates?
+  A1. optical-model, lldpprovider, hostprovider, openflow-base are activated or deactivated according to status of org.onosproject.openflow.
+  
+  Q2. As topology in p.22, can H1 ping H2 successfully? Why or why not?
+  A2. If we start onos localhost without activate or deactivate any app, H1 will not be able to ping H2 and so do in reverse.
+  
+  Q3. Which TCP port the controller listens for the OpenFlow connection request from the switch?
+  A3. To find the port controller listens for, we use command "cfg get org.onosproject.openflow.controller.impl.OpenFlowControllerImpl openflowPorts" in ONOS CLI,
+      output is one-line description of the command which may include 6653 and 6633. 6633 was used in earlier edtions and 6653 is the correct answer in this lab.
+      If you want to check whether controller in running topology is using port 6653, command "dump" can be used and answer will be shown in row "<RemoteController ...>" in output.
+  
+  Q4. In question 3, which APP enables the controller to listen on the TCP port?
+  A4. This question is exhausting due to the process of successive exclusion, I activated and deactivated apps one by one and keep the irrelated apps activated.
+      If the process is correct, the combination of openflow-base and drivers(both are apps) enable controller to listen on port 6653.
+      p.s : app dependency may exist among default apps in onos localhost, which means at least one app will be activated or deactivated when you activate or deactivate another app
+            I'm not sure if the dependency can be eliminate or not, please be careful when you try to prove the answer of this question.      
+
+
+Part3. Lab requirement
+  
+  1. Create custom topology
+     Customized mininet python topology can be created easily with python and called by mininet command. Follow the spec and you can finish this part
+  
+  2. Statically assign IP address
+     In python file, add IP in the parentheses of declaration of each host according to the integer provided in the spec.
+     
+After creating the python file, use command "sudo mn" to run the topology(don't forget to add argument to assign controller in topology).
+Remember to activate org.onosproject.fwd otherwise hosts in topology can't ping each other.

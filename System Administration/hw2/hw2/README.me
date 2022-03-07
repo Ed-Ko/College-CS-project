@@ -1,0 +1,39 @@
+This homework emphasizes on shell script, students have to write a one-line shell script and a graphical user management system using dialog in FreeBSD.
+
+
+Part1. One-line script
+       In this part, the requirement is to write a one-line script. This script can only exist one line shell command and produce 3 text files.
+       Input file is "auth.log" under "/var/log/", and output files are "audit_ip.txt", "audit_sudo.txt" and "audit_user.txt".
+       
+       Here are my steps to produce the 3 files : 
+       
+       (1). First remove the square brackets from every line in "auth.log" and Initialize the variable belongs to "awk" command that will be useful
+            in subsequent steps. For the 3 files, create 3 built-in hash maps of command "awk", the hash maps function as arrays and record the require content
+            with correct format(key : number of lines that are matched, value : required output with required order).
+            p.s : notice thath 3 files are handled in the same time, i.e, I used 3 "if" statements to check every line in "auth.log" and select matched
+                  line to corresponding statement for further processing.
+            
+       (2). Let's deal with "audit_sudo.txt" first. For every line in "auth.log", if a user use command "sudo", there is a word "sudo" in that line.
+            However ,extract all the lines that have this word also extract lines which are not exactly describe the details of a certain user using sudo command.
+            That's why we also look for key word "COMMAND=" in lines contain word "sudo".
+            After selecting matched lines, remove unwanted characters and reorder the line. Pushing it into corresponding hash map is the final step.
+       
+       (3). For "audit_user.txt", we need to find the lines that contain users who try to ssh into this machine but failed. Word "sshd" represents the message
+            from ssh service and word "PAM" indicates the authentication errors of ssh login, the two key words are effective to select matched lines.
+            Something important to be noticed are the rules below :
+              (*) illegal users are not recorded
+              (*) if a legal user failed 1 to 3 times(ssh will fail if login failed 3 times), lines in auth.log that contain the second and third time failre
+                  do not have key word "sshd" but key word "syslogd".
+            
+       (4). Process to deal with "audit_ip.txt" is similar to that of deal with "audit_user.txt", "audit_user.txt" focus on users while "audit_ip.txt" focus on\
+            IPs. To put it simply, the content of "audit_ip.txt" can be done at the same time when processing "audit_user.txt", because the IP of user who cause
+            ssh login error are in the same line.
+            Something also important to be noticed are the rules below :
+              (*) illegal users are "required" to be recorded
+              (*) if a legal user failed 1 to 3 times(ssh will fail if login failed 3 times), lines in auth.log that contain the second and third time failre
+                  do not have key word "sshd" but key word "syslogd". 
+       
+       (5). After processing the whole "auth.log", all the required content are recorded. At the end of command "awk", print out all the content in
+            the 3 hashmaps but add the file name that corresponding line should be put in front of each line.
+            The final step is to use command "awk" and ">" to write all the content to corresponding files.
+            
