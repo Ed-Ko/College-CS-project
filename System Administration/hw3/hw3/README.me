@@ -1,0 +1,147 @@
+A file server and ZFS backup are required in project3. Sometimes even though all the settings are well configured, file service still fail without any reason.
+This is widely seen in many of my classmates' project3, so my README.me only provide the method to build up a file server but not include solution to solve
+the unexpected problem.
+
+Part1.  File server 
+        In FreeBSD, pure-ftpd is choosed to build a file server. Users in pure-ftpd are called "virtual users". These virtual users behave like normal users
+        in FreeBSD but restricted by the access right of the users they refered to. Pure-ftpd also provides some account management in configuration of server.
+        More details will be explained later.       
+
+        According to the requirement in in the first part on spec, several directories and files should be created with specific access right. To finish this part,
+        access right of file(and directories) and user management in pure-ftpd configuration are needed.
+       
+        1.  Create 5 directories and 1 file
+            Directories and files in file server build up with pure-ftpd demands support from directories and files from real system(i.e, FreeBSD). The first step
+            is to create directories and files. The following step will show how to build up and set directories and files.
+
+            (1).    Create a directory named "ftp". Set the access right to "", directory owner to "" , dicretory group to ""
+                    This directory is the root directory of all directories and files in file server.
+
+            (2).    Create a directory named "public". Set the access right to "", directory owner to "" , dicretory group to ""
+                    Setting about upload right of anonymous is in congiguration file of pure-ftpd.
+
+            (3).    Create a directory named "upload". Set the access right to "", directory owner to "" , dicretory group to ""
+                    Setting about mkdir of anonymous account is in configuration file of pure-ftpd.
+                    The "t" in access right of "upload" stands for sticky bit. If a directory is assigned sticky bit, a file created by a user in
+                    this directory can only be deleted by this user and root.
+
+            (4).    Create a directory named "hidden". Set the access right to "", directory owner to "" , dicretory group to ""
+                    This directory does not allow anonymous user to list but can enter.
+            
+            (5).    Create a directory named "trasure" under directory "hidden". This directory allow anonymous user to list.
+                    Set the access right to "", directory owner to "" , dicretory group to ""
+
+            (6).    Create a file named "secret". Set the access right to "", file owner to "" , file group to "" 
+
+        2.  Create real user and group in FreeBSD
+            Creation of virtual user in pure-ftpd need real users and groups in FreeBSD as parameters, thus the two conditions shold be set first.
+
+            (1).    Create a group named "ftpuser" using command "pw groupadd", this group is the will be assigned to the user 
+                    created in following step.
+            
+            (2).    Create a user named "ftp" using command "pw useradd", assigned the directory "ftp" created in step 1-(1) as the home diretory of this user.
+                    Group "ftpuser" is assigned to this user.
+                    Virtual users "ftp-vip1" and "ftp-vip2" will use this user as parameter.
+
+            (3).    Create a user named "sysadm", assigned the directory "ftp" created in step 1-(1) as the home diretory of this user.
+                    Virtual user "sysadmin" will use this user as parameter.   
+
+
+        3.  Install & configurate pure-ftpd
+            Pure-ftpd is not a built-in application in FreeBSD. We must to install pure-ftpd first.
+
+            (1).    Use command "pkg install" to install pure-ftpd. Pure-ftpd does not have its own directory. The configuration file of pure-ftpd is in
+                    directory "/usr/local/etc" by default.
+
+            (2).    Move to directory "/usr/local/etc", copy file "pure-ftpd.conf.sample" to pure-ftpd.conf" and edit the configuration file "pure-ftpd.conf".
+                    Settings about access right of anonymous user can be found in this file.
+
+            (3).    There are some properties in the configuration file to modify.
+
+                    ChrootEveryone : "no" -> "yes", this property denies users in file server system to access directories that are outside their home directory.
+                    VerboseLog : "no" -> "yes", you can choose not to turn on this property if you're confident with your ability.
+                    NoAnonymous : "no" -> "yes", we need to allow anonymous users connect file server.
+                    PureDB : set to "/usr/local/etc/pureftpd.pdb", this is the path of database that process user information.
+                    AnonymousCanCreateDirs : "yes" -> "no", here we disallow anonymous to create directories.
+                    AnonymousCanUpload : "no" -> "yes", for some directories in file server, anonymous can upload files.
+                    TLS : Set to "2", something weird here is that if this property is set to "1", one can still access the file server. Once the property is set to "2",
+                          we can no longer connect to file server. This is a problem that to be solved another time.
+                    CertFile : Set to "/etc/ssl/ftp_private/pure-ftpd.pem", this is the path of certificate file that used for TLS session.
+                               Remember to create a directory named "ftp_private" to store certificate.
+                               Certificate can be generated by command "openssl"
+
+            (4).    All the settings are done, use command "service" to start pure-ftpd. Command "ftp localhost" can be used to test access to file server.
+                    You can choose to add "pureftpd_enable" in file "rc.conf" to start pure-ftpd every time when machine boot up.
+
+            (5).    There still something to do with pure-ftpd settings. Two log files are used to save ftp login records. Here we need support of syslog.
+                    In directory "/etc", a file named "syslog.conf" put different levels of message from different applications to specific files.
+                    Two lines are added to create logs, details about syslog is not going to be explaied here.
+
+                    ftp.*                /var/log/pureftpd/pureftpd/pureftpd.log : This line is to record all the message from pureftpd.
+                    ftp.info             /var/log/pureftpd/pureftpd/login.log : Only login record is accepted.
+
+        So far, part1 is done.
+
+
+Part2.  Pure-ftpd upload scripts
+        In this part, a service named "ftp-watchd" is created to execute a script after files are uploaded to file server. To achieve this goal, another service
+        called "pure-uploadscript" is used to help us. 
+        
+        1.  The interaction between service "ftp-watchd" and service "pure-uploadscipt"
+            First, service "ftp-watchd" will execute command "pure-uploadscript" with path of file "uploadscript.sh" as argument, so service "pure-uploadscript"
+            starts to execute file "uploadscript.sh". Every time when there is a file uploaded, "uploadscript.sh" will check if the uploaded file is ".exe" file.
+            ".exe" files are moved from original directory to "/home/ftp/public/pureftpd.viofile"
+            
+        2.  Create service "ftp-watchd"
+            A Service in FreeBSD is actually a shell script. My "ftp-watchd" is in direcotry on Github. Details of "ftp-watchd" is listed below.
+
+            (1).    To create a service, there are something to declare in shell script.
+
+                    name : The name of this shell script.
+                    
+                    rcvar : The variable that exists in file "rc.conf" and allow this service to execute.
+                    
+                    pidfile : The PID file of "ftp-watchd" that is used to start or stop service.
+                    
+                    start_cmd : When executing command "service ftp-watchd start", value of this property is the function name in this shell script.
+                                In function "ftp-watchd_start", check if service "ftp-watchd" is already start. If service is not running, run command
+                                "pure-uploadscript" with parameter "-Br" to run pure-uploadscript in background and use specific file.
+                    
+                    stop_cmd : When executing command "service ftp-watchd stop", value of this property is the function name in this shell script.
+                               In function "ftp-watchd_stop", the pid of service "ftp-watchd" will be catched and stop service "ftp-watchd"
+                               using command "kill".
+                    
+                    restart_cmd : When executing command "service ftp-watchd restart", value of this property is the function name in this shell script.
+                                  To create restart command, this can be easily completed by copying code of "ftp-watchd_start" and "ftp-watchd_stop". 
+                    
+                    status_cmd : When executing command "service ftp-watchd status", value of this property is the function name in this shell script.
+                                 PID file of service "ftp-watchd" is searched and print to standard out.
+                    
+                    command : The value of this variable is the path of shell script "ftp-watchd".
+
+                    load_rc_config : This is a function from rc.subr that will find the configuration file of service. Here file "ftp-watchd" is the file. 
+                    
+                    run_rc_command : When system boot up, the system "rc.d" will run "/etc/rc.d/ftp-watchd start". Then this function will get the argument
+                                     from command line, here action "start" is the argument. Then this shell script will execute function "ftp-watchd_start".
+            
+            (2).    Now let's config file "uploadscript.sh" to meet the requirements. In pure-uploadscript, there are some specific variables that represent
+                    information from uploaded files and use these variables in shell script. In file "uploadscript.sh", first we get the full path of uploaded
+                    file, the name of file and check if the it is ".exe" file. If uploaded file is ".exe" file, it is copied to directory "/home/ftp/hidden/.exe"
+                    with same name. Uploaded file in original directory is deleted.
+                    The most important thing to do in this script is that we have to send log message to specific file using syslog. To achieve this goal,
+                    command "logger" is used. With command "logger" and parameter "-p", we can send log message to specific facility.
+
+            (3).    Once the shell scripts are done, service can be started by command "service ftp-watchd start". But now how the command "logger" in file
+                    "uploadscript.sh" can send message to file "pureftpd.viofile"? This should be solved by creating a configuration file named "ftpuscr" in
+                    directory "/etc/syslog.d". Notice that the file name doesn't matter, only configuration files in directory "/etc/syslog.d" kick in.
+                    Now create a configuration file, add a line that the facility field is "local0.notice" and the action field is the path of file
+                    "pureftpd.viofile".
+                    After creating configuration file "ftpuscr", find file "syslog.conf", basically it locates in directory "/etc". The reason why we can 
+                    declare an independent configuration file is that there is a line in "syslog.conf" with facility field filled with "include" and action
+                    field filled with "/etc/syslog.d", this line enables system to find configuration files in different directories.
+                    
+            Now all the functions of part2 is finished.
+
+            p.s :   The only problem not solved is that the user field(in spec they call it "processname") is not able to change after testing several days.
+                    I would appreciate it if you can help me deal with this problem. 
+
